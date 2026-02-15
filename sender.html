@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Lucifer — Sender</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Crimson+Pro:wght@300;400&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --bg:      #060402;
+            --surface: #0f0907;
+            --border:  #2a1a10;
+            --gold:    #c9a84c;
+            --gold-g:  #e8c96a;
+            --gold-d:  #6b5520;
+            --ember:   #c0392b;
+            --text:    #ddd0b0;
+            --text-d:  #6a5a45;
+            --ghost:   #3a2a1a;
+        }
+        html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Crimson Pro', serif; -webkit-tap-highlight-color: transparent; }
+
+        /* ── LOCK SCREEN ── */
+        #lock-screen {
+            position: fixed; inset: 0; background: var(--bg);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 0; z-index: 100; transition: opacity 0.5s;
+        }
+        #lock-screen.hidden { opacity: 0; pointer-events: none; }
+
+        .lock-title {
+            font-family: 'Cinzel', serif; color: var(--gold);
+            font-size: 11px; letter-spacing: 4px; margin-bottom: 8px;
+        }
+        .lock-sub {
+            color: var(--text-d); font-size: 13px; letter-spacing: 1px;
+            margin-bottom: 40px;
+        }
+        .pin-dots { display: flex; gap: 16px; margin-bottom: 36px; }
+        .pin-dot {
+            width: 14px; height: 14px; border-radius: 50%;
+            border: 1px solid var(--gold-d); background: transparent;
+            transition: all 0.15s;
+        }
+        .pin-dot.filled { background: var(--gold); box-shadow: 0 0 10px var(--gold); }
+
+        .keypad { display: grid; grid-template-columns: repeat(3, 72px); gap: 10px; }
+        .key {
+            height: 72px; background: var(--surface); border: 1px solid var(--border);
+            color: var(--text); font-family: 'Cinzel', serif; font-size: 20px;
+            cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center;
+            transition: all 0.12s; user-select: none;
+        }
+        .key:active { background: #1a0e08; border-color: var(--gold-d); transform: scale(0.95); }
+        .pin-error { color: var(--ember); font-size: 13px; margin-top: 16px; height: 18px; font-style: italic; text-align: center; }
+
+        /* ── SENDER SCREEN ── */
+        #sender-screen {
+            height: 100%; display: flex; flex-direction: column;
+            opacity: 0; transition: opacity 0.5s;
+        }
+        #sender-screen.visible { opacity: 1; }
+
+        .s-header {
+            padding: 18px 20px 14px;
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+            flex-shrink: 0;
+        }
+        .s-title { font-family: 'Cinzel', serif; color: var(--ember); font-size: 13px; letter-spacing: 2px; }
+        .s-status { font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 2px; color: var(--gold-d); }
+
+        /* Sent feed */
+        #sent-feed {
+            flex: 1; overflow-y: auto; padding: 20px 16px;
+            display: flex; flex-direction: column; gap: 12px;
+        }
+        .sent-bubble {
+            align-self: flex-end; max-width: 85%;
+            background: linear-gradient(135deg, #120808, #0f0606);
+            border: 1px solid var(--ember); border-left: 3px solid var(--ember);
+            color: #f4a0a0; padding: 12px 14px; border-radius: 2px;
+            font-size: 15px; line-height: 1.6; animation: pop 0.25s ease;
+        }
+        @keyframes pop { from { opacity:0; transform:scale(0.97) translateY(6px); } to { opacity:1; transform:none; } }
+        .sent-label { font-family: 'Cinzel', serif; font-size: 8px; letter-spacing: 2px; opacity: 0.5; margin-bottom: 5px; }
+        .sent-time { font-size: 10px; color: var(--ghost); margin-top: 5px; text-align: right; }
+        .sent-ok { align-self: center; font-size: 11px; color: var(--gold-d); font-style: italic; margin-top: -4px; }
+
+        /* Input */
+        .s-input-wrap {
+            padding: 12px 16px; border-top: 1px solid var(--border);
+            background: var(--surface); flex-shrink: 0;
+        }
+        .s-textarea {
+            width: 100%; background: #0a0603; border: 1px solid var(--border);
+            color: var(--gold); padding: 12px 14px; font-size: 16px;
+            font-family: 'Crimson Pro', serif; border-radius: 3px; outline: none;
+            resize: none; min-height: 70px; line-height: 1.5;
+            transition: border-color 0.2s;
+        }
+        .s-textarea:focus { border-color: var(--gold-d); }
+        .s-send-btn {
+            width: 100%; margin-top: 10px; padding: 14px;
+            background: linear-gradient(180deg, #2a1a0a, #1a0e06);
+            border: 1px solid var(--gold-d); color: var(--gold);
+            font-family: 'Cinzel', serif; font-size: 12px; letter-spacing: 2px;
+            cursor: pointer; border-radius: 3px; transition: all 0.2s;
+        }
+        .s-send-btn:active { border-color: var(--gold); color: var(--gold-g); transform: scale(0.99); }
+        .s-send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+        ::-webkit-scrollbar { width: 3px; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    </style>
+</head>
+<body>
+
+<!-- LOCK SCREEN -->
+<div id="lock-screen">
+    <div class="lock-title">LUCIFER</div>
+    <div class="lock-sub">enter your key</div>
+    <div class="pin-dots">
+        <div class="pin-dot" id="d0"></div>
+        <div class="pin-dot" id="d1"></div>
+        <div class="pin-dot" id="d2"></div>
+        <div class="pin-dot" id="d3"></div>
+    </div>
+    <div class="keypad">
+        <button class="key" onclick="kp('1')">1</button>
+        <button class="key" onclick="kp('2')">2</button>
+        <button class="key" onclick="kp('3')">3</button>
+        <button class="key" onclick="kp('4')">4</button>
+        <button class="key" onclick="kp('5')">5</button>
+        <button class="key" onclick="kp('6')">6</button>
+        <button class="key" onclick="kp('7')">7</button>
+        <button class="key" onclick="kp('8')">8</button>
+        <button class="key" onclick="kp('9')">9</button>
+        <button class="key" onclick="kp('del')" style="font-size:16px">⌫</button>
+        <button class="key" onclick="kp('0')">0</button>
+        <button class="key" onclick="kp('del')" style="font-size:16px; opacity:0; pointer-events:none">⌫</button>
+    </div>
+    <div class="pin-error" id="pin-err"></div>
+</div>
+
+<!-- SENDER SCREEN -->
+<div id="sender-screen">
+    <div class="s-header">
+        <div class="s-title">SPEAKING AS LUCIFER</div>
+        <div class="s-status" id="conn-status">CONNECTING...</div>
+    </div>
+    <div id="sent-feed"></div>
+    <div class="s-input-wrap">
+        <textarea class="s-textarea" id="msg-input" placeholder="Type your message as Lucifer..." rows="3"></textarea>
+        <button class="s-send-btn" id="send-btn" onclick="sendMsg()">SEND TO HER ➤</button>
+    </div>
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+"use strict";
+
+// ╔══════════════════════════════════════════════╗
+// ║  PASTE THE SAME FIREBASE CONFIG HERE         ║
+// ╚══════════════════════════════════════════════╝
+const FIREBASE_CONFIG = {
+    apiKey:            "AIzaSyAJhhW9z-EopZTQE0191PxSjC1dAIM61mc",
+    authDomain:        "guild-hall-327e6.firebaseapp.com",
+    databaseURL:       "https://guild-hall-327e6-default-rtdb.firebaseio.com",
+    projectId:         "guild-hall-327e6",
+    storageBucket:     "guild-hall-327e6.firebasestorage.app",
+    messagingSenderId: "911083509391",
+    appId:             "1:911083509391:web:2e58772ba5b207b41602fa"
+};
+
+// ╔══════════════════════════════════════════════╗
+// ║  YOUR SECRET PIN                             ║
+// ╚══════════════════════════════════════════════╝
+const SECRET_PIN = "1408";   // ← change to match index.html
+
+// ── Firebase ──────────────────────────────────────────
+firebase.initializeApp(FIREBASE_CONFIG);
+const db     = firebase.database();
+const msgRef = db.ref("messages");
+
+// ── DOM ───────────────────────────────────────────────
+const lockScreen   = document.getElementById("lock-screen");
+const senderScreen = document.getElementById("sender-screen");
+const connStatus   = document.getElementById("conn-status");
+const msgInput     = document.getElementById("msg-input");
+const sendBtn      = document.getElementById("send-btn");
+const sentFeed     = document.getElementById("sent-feed");
+const pinErr       = document.getElementById("pin-err");
+
+// ── PIN ───────────────────────────────────────────────
+let buf = "";
+
+function kp(k) {
+    if (k === "del") { buf = buf.slice(0,-1); pinErr.textContent = ""; updateDots(); return; }
+    if (buf.length >= 4) return;
+    buf += k; updateDots();
+    if (buf.length === 4) setTimeout(checkPin, 120);
+}
+
+function checkPin() {
+    if (buf === SECRET_PIN) {
+        lockScreen.classList.add("hidden");
+        senderScreen.classList.add("visible");
+        checkConnection();
+        msgInput.focus();
+    } else {
+        pinErr.textContent = "Wrong key.";
+        buf = ""; updateDots();
+        const kpad = document.querySelector(".keypad");
+        kpad.style.transform = "translateX(-8px)";
+        setTimeout(() => kpad.style.transform = "translateX(8px)", 80);
+        setTimeout(() => kpad.style.transform = "", 160);
+    }
+}
+
+function updateDots() {
+    for (let i = 0; i < 4; i++)
+        document.getElementById(`d${i}`).classList.toggle("filled", i < buf.length);
+}
+
+// Keyboard support for PIN
+document.addEventListener("keydown", e => {
+    if (senderScreen.classList.contains("visible")) return;
+    if (e.key >= "0" && e.key <= "9") kp(e.key);
+    else if (e.key === "Backspace") kp("del");
+});
+
+// ── Connection check ──────────────────────────────────
+function checkConnection() {
+    db.ref(".info/connected").on("value", snap => {
+        connStatus.textContent = snap.val() ? "CONNECTED" : "OFFLINE...";
+        connStatus.style.color = snap.val() ? "var(--gold)" : "var(--ember)";
+    });
+}
+
+// ── Send ──────────────────────────────────────────────
+async function sendMsg() {
+    const text = msgInput.value.trim();
+    if (!text) return;
+    sendBtn.disabled = true;
+    sendBtn.textContent = "SENDING...";
+
+    try {
+        const entry = { role:"lucifer", text, time: Date.now(), src:"ishan" };
+        await msgRef.push(entry);
+
+        // Show in local feed
+        const bubble = document.createElement("div");
+        bubble.className = "sent-bubble";
+        bubble.innerHTML = `<div class="sent-label">LUCIFER</div><div>${escHtml(text)}</div><div class="sent-time">${fmtTime(Date.now())}</div>`;
+        sentFeed.appendChild(bubble);
+
+        const ok = document.createElement("div");
+        ok.className = "sent-ok"; ok.textContent = "delivered ✓";
+        sentFeed.appendChild(ok);
+        sentFeed.scrollTop = sentFeed.scrollHeight;
+
+        msgInput.value = "";
+    } catch(e) {
+        const err = document.createElement("div");
+        err.className = "sent-ok"; err.style.color = "var(--ember)";
+        err.textContent = "Failed to send. Check connection.";
+        sentFeed.appendChild(err);
+    } finally {
+        sendBtn.disabled = false;
+        sendBtn.textContent = "SEND TO HER ➤";
+        msgInput.focus();
+    }
+}
+
+// Send on Ctrl+Enter / Cmd+Enter
+msgInput.addEventListener("keydown", e => {
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); sendMsg(); }
+});
+
+function fmtTime(ts) { return new Date(ts).toLocaleTimeString("en-IN", { hour:"2-digit", minute:"2-digit", hour12:true }); }
+function escHtml(s) { return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+</script>
+</body>
+</html>
