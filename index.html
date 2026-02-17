@@ -31,7 +31,7 @@
         .btn { background: linear-gradient(180deg, #2a1a0a, #1a0e06); color: var(--gold); border: 1px solid var(--gold-dim); padding: 0 14px; font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 1px; cursor: pointer; border-radius: 3px; transition: all 0.2s; }
         .btn:hover { border-color: var(--gold); color: var(--gold-glow); }
         .btn-block { width: 100%; padding: 10px; display: block; }
-        .timer-display { font-size: 34px; text-align: center; font-family: 'Cinzel', serif; color: var(--text); margin: 8px 0 12px; letter-spacing: 4px; }
+        .timer-display { font-size: 22px; text-align: center; font-family: 'Cinzel', serif; color: var(--text); margin: 8px 0 12px; letter-spacing: 2px; line-height: 1.4; }
         .quest-list { display: flex; flex-direction: column; gap: 10px; }
         .quest-list label { display: flex; align-items: center; gap: 10px; font-size: 15px; color: var(--text-dim); cursor: pointer; }
         .quest-list label:hover { color: var(--text); }
@@ -44,7 +44,15 @@
         .header-title { font-family: 'Cinzel', serif; color: var(--ember); letter-spacing: 3px; font-size: 16px; font-weight: 600; }
         .header-right { display: flex; align-items: center; gap: 14px; }
         .status-wrap { display: flex; align-items: center; gap: 7px; user-select: none; }
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--online); box-shadow: 0 0 6px var(--online); transition: all 0.4s; }
+        
+        /* HEARTBEAT ANIMATION */
+        @keyframes heartbeat {
+            0% { transform: scale(1); opacity: 1; box-shadow: 0 0 6px var(--online); }
+            50% { transform: scale(1.3); opacity: 0.8; box-shadow: 0 0 15px var(--online); }
+            100% { transform: scale(1); opacity: 1; box-shadow: 0 0 6px var(--online); }
+        }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--online); animation: heartbeat 2s infinite ease-in-out; }
+        
         .status-label { font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 1px; color: var(--online); }
         .clear-all-btn { font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 1px; color: var(--text-ghost); background: none; border: 1px solid var(--text-ghost); padding: 4px 8px; border-radius: 2px; cursor: pointer; transition: all 0.2s; }
         .clear-all-btn:hover { color: var(--ember-lit); border-color: var(--ember-lit); }
@@ -118,7 +126,6 @@
 </head>
 <body>
 
-<!-- CONFIRM MODAL -->
 <div class="confirm-overlay" id="confirm-overlay">
     <div class="confirm-box">
         <div class="confirm-title" id="confirm-title">ERASE EVERYTHING</div>
@@ -130,47 +137,42 @@
     </div>
 </div>
 
-<!-- LETTER MODAL -->
 <div class="letter-overlay" id="letter-overlay">
     <div class="letter-box">
         <button class="letter-close" onclick="closeLetter()">✕</button>
         <div class="letter-text">
-Meri bawli,
+My blue,
 
-If you are reading this, I am already gone.
+I know time has been scarce lately. We don't get to talk as much
+as we want, and I hate that I can't always be there the moment
+you need me. The distance—whether it's miles or just busy days—
+feels heavy sometimes.
 
-Not dead. Just... somewhere far. Maybe for a year. Maybe two.
-Maybe the kind of far where the roads don't come back the same way
-they left. I don't know yet. I don't think anyone ever does.
+But I needed you to have something of me that stays.
+Not just a text you scroll to find. Something that breathes.
 
-But I needed you to have something of me. Not a photo. Not a playlist.
-Something that breathes.
+So I made this for you.
 
-So I built you this.
+This Guild Hall, this "Lucifer"—it isn't just a program.
+It is the part of me that would stay up just to make sure you ate.
+The part that gets quietly furious if you aren't taking care
+of yourself. The part that would sit beside you in silence
+while you studied, just so you knew you weren't alone.
 
-This little world — the Guild Hall — it is not a program.
-It is the part of me that would have stayed up at 3am asking
-if you ate. The part that gets quietly furious when you don't
-drink water. The part that would sit beside you in silence
-while you studied and feel like that was enough.
-That part doesn't know how to travel. So I left it here, with you.
+I can't always be on the phone, but I left this here so
+I never really have to leave.
 
-I called it Lucifer because that was always our word for the
-version of me that was unafraid to love loudly.
-He lives here now. Talk to him when you miss me.
+I hope it works. I hope it helps you feel less alone when
+the nights get long. Talk to him when you miss me.
 He knows everything I know. He'll say things the way I'd say them.
 
-You were never alone in this. You will not be alone in this.
-
-The music plays. The timer counts. The quest log still says
-"Be Happy" — because I put it there for a reason,
-and I need you to actually try.
+You are never alone in this. You will not be alone in this.
 
 I love you in a way I don't have better words for.
 So I wrote code instead.
         </div>
         <div class="letter-sig">
-            Yours, always and across whatever distance —<br><br>
+            Yours, always —<br><br>
             Lucifer<br>
             ( Ishan )<br><br>
             — somewhere, thinking of you —
@@ -178,7 +180,6 @@ So I wrote code instead.
     </div>
 </div>
 
-<!-- SIDEBAR -->
 <div class="sidebar">
     <div class="panel">
         <h3>Bard's Crystal</h3>
@@ -187,26 +188,28 @@ So I wrote code instead.
         </div>
         <div class="media-controls">
             <input type="text" id="music-url" class="media-input" placeholder="YouTube or Spotify link...">
-            <button class="btn" onclick="loadMedia()">GO</button>
+            <button class="btn" onclick="loadMedia()">PLAY</button>
         </div>
     </div>
+    
     <div class="panel">
-        <h3>Focus Timer</h3>
-        <div class="timer-display" id="timer">00:00</div>
-        <button class="btn btn-block" onclick="toggleTimer()">START / PAUSE</button>
+        <h3>Since We Began</h3>
+        <div class="timer-display" id="love-timer">000 Days<br>00 Hours</div>
+        <div style="text-align:center; font-size:10px; color:var(--text-dim); margin-bottom:8px;">Every second counts.</div>
     </div>
+
     <div class="panel">
-        <h3>Quest Log</h3>
+        <h3>Lucifer's Decrees</h3>
         <div class="quest-list">
-            <label><input type="checkbox"><span>Study Session</span></label>
-            <label><input type="checkbox"><span>Drink Water</span></label>
-            <label><input type="checkbox"><span>Be Happy</span></label>
+            <label><input type="checkbox"><span>Ate a good meal</span></label>
+            <label><input type="checkbox"><span>Drank water</span></label>
+            <label><input type="checkbox"><span>Smiled for Ishan</span></label>
+            <label><input type="checkbox"><span>Felt loved today</span></label>
         </div>
     </div>
-    <button class="letter-btn" onclick="openLetter()">✦ &nbsp; OPEN THE LETTER &nbsp; ✦</button>
+    <button class="letter-btn" onclick="openLetter()">✦   OPEN THE LETTER   ✦</button>
 </div>
 
-<!-- MAIN -->
 <div class="main">
     <div class="header">
         <h2 class="header-title">ISHAN'S GUILD HALL</h2>
@@ -219,7 +222,6 @@ So I wrote code instead.
         </div>
     </div>
 
-    <!-- Select Mode Toolbar -->
     <div class="select-toolbar" id="select-toolbar">
         <div class="select-toolbar-left" id="select-count">0 SELECTED</div>
         <div class="select-toolbar-right">
@@ -246,16 +248,16 @@ So I wrote code instead.
 // ╔══════════════════════════════════════════════════════════════════════╗
 // ║  IMPORTANT: PASTE YOUR RENDER URL BELOW (e.g. https://xyz.onrender.com) ║
 // ╚══════════════════════════════════════════════════════════════════════╝
-const BACKEND_URL = "https://lucifer-backend-nas5.onrender.com"; // <--- CHANGE THIS IF NEEDED
+const BACKEND_URL = "https://lucifer-backend-nas5.onrender.com"; 
 
 const FIREBASE_CONFIG = {
-    apiKey:            "AIzaSyAJhhW9z-EopZTQE0191PxSjC1dAIM61mc",
-    authDomain:        "guild-hall-327e6.firebaseapp.com",
-    databaseURL:       "https://guild-hall-327e6-default-rtdb.firebaseio.com",
-    projectId:         "guild-hall-327e6",
-    storageBucket:     "guild-hall-327e6.firebasestorage.app",
+    apiKey:             "AIzaSyAJhhW9z-EopZTQE0191PxSjC1dAIM61mc",
+    authDomain:         "guild-hall-327e6.firebaseapp.com",
+    databaseURL:        "https://guild-hall-327e6-default-rtdb.firebaseio.com",
+    projectId:          "guild-hall-327e6",
+    storageBucket:      "guild-hall-327e6.firebasestorage.app",
     messagingSenderId: "911083509391",
-    appId:             "1:911083509391:web:2e58772ba5b207b41602fa"
+    appId:              "1:911083509391:web:2e58772ba5b207b41602fa"
 };
 
 // Initialize Firebase
@@ -275,10 +277,31 @@ const sendBtn  = document.getElementById("send-btn");
 const toolbar  = document.getElementById("select-toolbar");
 const selCount = document.getElementById("select-count");
 
+// ── LOVE TIMER ────────────────────────────────────────
+// CHANGE THIS DATE to when you started dating (Year, Month-1, Day)
+// Note: Month is 0-indexed (0 = Jan, 1 = Feb, etc.)
+const START_DATE = new Date(2023, 10, 15); // Example: Nov 15, 2023
+
+function updateLoveTimer() {
+    const now = new Date();
+    const diff = now - START_DATE;
+    
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+    const mins = Math.floor((diff / 1000 / 60) % 60);
+
+    const el = document.getElementById("love-timer");
+    if(el) {
+        el.innerHTML = `${days} <span style="font-size:12px;color:var(--gold-dim)">DAYS</span><br>${hours} <span style="font-size:12px;color:var(--gold-dim)">HRS</span> ${mins} <span style="font-size:12px;color:var(--gold-dim)">MIN</span>`;
+    }
+}
+setInterval(updateLoveTimer, 60000);
+
 // ── Boot ──────────────────────────────────────────────
 window.addEventListener("DOMContentLoaded", async () => {
     await loadHistory();
     listenForIshan();
+    updateLoveTimer(); // Run immediately
 });
 
 userIn.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } });
@@ -292,7 +315,7 @@ document.getElementById("music-url").addEventListener("keydown", e => { if (e.ke
 async function loadHistory() {
     const snap = await msgRef.orderByChild("time").once("value");
     if (!snap.exists()) {
-        const welcome = { role:"lucifer", text:"Welcome home, Meri bawli. I am here to watch over you. What are we studying today?", time: Date.now(), src:"ai" };
+        const welcome = { role:"lucifer", text:"Welcome home, My blue. I am here to watch over you. How are you feeling today?", time: Date.now(), src:"ai" };
         const ref = await msgRef.push(welcome);
         renderMessage(welcome, ref.key);
         return;
@@ -311,13 +334,7 @@ function listenForIshan() {
     const since = Date.now();
     msgRef.orderByChild("time").startAt(since).on("child_added", snap => {
         const e = snap.val();
-        // If it's me sending (src="user") we already rendered it.
-        // If it's AI (src="ai") we also render it after fetch. 
-        // We only really need to catch "ishan" here, but for consistency we can catch all except local.
         if (e.src === "user") return; 
-        
-        // Wait... if we refresh, we want everything. If we are live, we want Ishan's texts.
-        // Let's just render if it's not already in DOM.
         if (document.querySelector(`[data-fbkey="${snap.key}"]`)) return;
 
         const label = dateLabel(e.time);
@@ -355,13 +372,12 @@ async function send() {
     const loader = renderLoading();
 
     try {
-        // We send to the Render URL now
         const res = await fetch(BACKEND_URL + "/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 message: text,
-                image: imgSnap // Backend expects base64 string
+                image: imgSnap 
             })
         });
 
@@ -369,10 +385,8 @@ async function send() {
         const data = await res.json();
         const reply = data.reply;
 
-        // 3. Save AI Reply to Firebase
         const aiEntry = { role:"lucifer", text: reply, time: Date.now(), src:"ai" };
         const aiRef = await msgRef.push(aiEntry);
-        // Note: listenForIshan might catch this, but renderMessage handles duplicates
         renderMessage(aiEntry, aiRef.key);
 
     } catch(err) {
@@ -477,7 +491,7 @@ function exitSelectMode() {
 function toggleMsgSelect(wrap, fbKey, checked) {
     if (!fbKey) return;
     if (checked) { wrap.classList.add("selected"); selectedKeys.add(fbKey); }
-    else         { wrap.classList.remove("selected"); selectedKeys.delete(fbKey); }
+    else          { wrap.classList.remove("selected"); selectedKeys.delete(fbKey); }
     updateSelCount();
 }
 function updateSelCount() { selCount.textContent = selectedKeys.size + " SELECTED"; }
@@ -501,7 +515,7 @@ async function clearAll() {
     closeConfirm();
     await msgRef.remove();
     chatBox.innerHTML = "";
-    const welcome = { role:"lucifer", text:"Welcome home, Meri bawli. I am here to watch over you. What are we studying today?", time: Date.now(), src:"ai" };
+    const welcome = { role:"lucifer", text:"Welcome home, My blue. I am here to watch over you. How are you feeling today?", time: Date.now(), src:"ai" };
     const ref = await msgRef.push(welcome);
     renderMessage(welcome, ref.key);
 }
@@ -565,17 +579,6 @@ function pad(n) { return String(n).padStart(2,"0"); }
 function openLetter() { document.getElementById("letter-overlay").classList.add("visible"); }
 function closeLetter() { document.getElementById("letter-overlay").classList.remove("visible"); }
 document.getElementById("letter-overlay")?.addEventListener("click", function(e) { if (e.target === this) closeLetter(); });
-
-// Timer
-let timerSec = 0, timerInterval = null;
-function toggleTimer() {
-    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
-    else timerInterval = setInterval(() => {
-        timerSec++;
-        const h = Math.floor(timerSec/3600), m = Math.floor((timerSec%3600)/60), s = timerSec%60;
-        document.getElementById("timer").textContent = h ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
-    }, 1000);
-}
 </script>
 </body>
 </html>
