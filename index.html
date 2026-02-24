@@ -529,6 +529,7 @@ So I wrote code instead.
     <div class="header">
         <h2 class="header-title">ISHAN'S GUILD HALL</h2>
         <div class="header-right">
+            <button class="clear-all-btn" onclick="clearAllChat()">CLEAR ALL</button>
             <div class="status-wrap">
                 <div class="status-dot"></div>
                 <span class="status-label">Lucifer Online</span>
@@ -706,9 +707,9 @@ async function loadHistory() {
 }
 
 function listenForIshan() {
-    msgRef.orderByChild("time").startAt(Date.now()).on("child_added", snap => {
+    msgRef.orderByChild("time").on("child_added", snap => {
         const e = snap.val();
-        if (e.src === "user" || document.querySelector(`[data-fbkey="${snap.key}"]`)) return;
+        if (document.querySelector(`[data-fbkey="${snap.key}"]`)) return;
         renderMessage(e, snap.key);
     });
 }
@@ -760,16 +761,47 @@ function renderLoading() {
     return w;
 }
 
+function clearAllChat() {
+    if (!confirm("Clear all messages? This cannot be undone.")) return;
+    chatBox.innerHTML = "";
+    conversation_history = [];
+}
+
+function clearAllChat() {
+    if (!confirm("Clear all messages? This cannot be undone.")) return;
+    chatBox.innerHTML = "";
+    conversation_history = [];
+}
+
 function updateRadioStatus(text) {
     radioStatus.textContent = text;
 }
 
-// ── YOUTUBE SEARCH & PLAY ──
+// ── YOUTUBE SEARCH & PLAY (LAZY - No requests until user clicks SEARCH) ──
+let youtubeLastSearchTime = 0;
+
 async function searchYoutubeSongs() {
     const query = songSearchInput.value.trim();
-    if (!query) return;
+    if (!query) {
+        updateRadioStatus("Enter a song name first.");
+        return;
+    }
 
-    updateRadioStatus("Searching YouTube...");
+    // Rate limit on frontend: no searches faster than 10s apart
+    const now = Date.now();
+    if (now - youtubeLastSearchTime < 10000) {
+        const waitSecs = Math.ceil((10000 - (now - youtubeLastSearchTime)) / 1000);
+        updateRadioStatus(`Wait ${waitSecs}s before next search.`);
+        return;
+    }
+    youtubeLastSearchTime = now;
+
+    if (!HANDSHAKE_SECRET) {
+        updateRadioStatus("Not authenticated yet.");
+        return;
+    }
+
+    updateRadioStatus("Searching YouTube...")
     songResults.innerHTML = "";
 
     try {
@@ -783,8 +815,16 @@ async function searchYoutubeSongs() {
         });
         const data = await res.json();
 
-        if (!res.ok || data.error) {
-            throw new Error(data?.error?.message || "youtube_search_failed");
+        if (!res.ok) {
+            // Detect quota exceeded
+            if (res.status === 403 && data?.error?.includes("quota")) {
+                updateRadioStatus("🔴 YouTube API quota exhausted. Resets tomorrow.");
+            } else if (res.status === 429) {
+                updateRadioStatus("⏳ " + (data?.error || "Too many requests. Wait a moment."));
+            } else {
+                updateRadioStatus(`❌ ${data?.error || "Search failed"}`);
+            }
+            return;
         }
 
         if (data.items && data.items.length > 0) {
@@ -793,7 +833,6 @@ async function searchYoutubeSongs() {
                 trackName: item.snippet.title || "Untitled",
                 artistName: item.snippet.channelTitle || "Unknown channel"
             }));
-            
             renderYoutubeResults();
             updateRadioStatus(`Found ${songResultsData.length} tracks.`);
             playYoutubeTrack(0);
@@ -804,7 +843,7 @@ async function searchYoutubeSongs() {
         }
     } catch (err) {
         console.error(err);
-        updateRadioStatus("Search failed. Check API key quota/settings.");
+        updateRadioStatus("❌ Network error. Check connection.");
     }
 }
 
