@@ -764,12 +764,38 @@ function renderLoading() {
 async function clearAllChat() {
     if (!confirm("Clear all messages from Firebase and this chat? This cannot be undone.")) return;
     try {
-        await msgRef.remove();
+        if (!auth.currentUser) {
+            await auth.signInAnonymously();
+        }
+
+        const tasks = [msgRef.remove()];
+
+        if (HANDSHAKE_SECRET) {
+            tasks.push(
+                fetch(BACKEND_URL + "/clear-chat", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-Lucifer-Secret": HANDSHAKE_SECRET
+                    }
+                })
+            );
+        }
+
+        const results = await Promise.allSettled(tasks);
+        const failed = results.some(r => r.status === "rejected");
+
         chatBox.innerHTML = "";
-        updateRadioStatus("All chat messages deleted.");
+        updateRadioStatus(failed ? "Some clear operations failed." : "All chat messages deleted.");
+
+        if (failed) {
+            alert("Some data could not be cleared. Check console for details.");
+            console.error("Clear all results:", results);
+        }
     } catch (err) {
         console.error(err);
         updateRadioStatus("Failed to clear messages.");
+        alert("Failed to clear messages: " + (err.message || err));
     }
 }
 
@@ -777,9 +803,6 @@ function updateRadioStatus(text) {
     radioStatus.textContent = text;
 }
 
-// ── YOUTUBE SEARCH & PLAY (LAZY - No requests until user clicks SEARCH) ──
-// ── YOUTUBE SEARCH & PLAY (LAZY - No requests until user clicks SEARCH) ──
-// ── YOUTUBE SEARCH & PLAY (LAZY - No requests until user clicks SEARCH) ──
 // ── YOUTUBE SEARCH & PLAY (LAZY - No requests until user clicks SEARCH) ──
 let youtubeLastSearchTime = 0;
 
