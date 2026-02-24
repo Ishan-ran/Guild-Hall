@@ -76,6 +76,14 @@
             min-height: 16px;
             font-style: italic;
         }
+        #lock-status {
+            color: var(--text-dim);
+            font-size: 11px;
+            min-height: 16px;
+            text-align: center;
+            max-width: 320px;
+            line-height: 1.4;
+        }
         #guild-content { display: none; width: 100%; height: 100%; }
         body.unlocked #guild-content { display: flex; }
         body.unlocked #site-lock { display: none; }
@@ -437,6 +445,7 @@
     <input type="password" id="guild-pass" class="lock-input" placeholder="Enter Secret Word">
     <button class="btn" style="padding:12px 30px; font-size:12px;" onclick="unlockGuild()">UNSEAL</button>
     <div id="lock-error"></div>
+    <div id="lock-status"></div>
 </div>
 
 <div id="guild-content">
@@ -546,7 +555,6 @@ So I wrote code instead.
 "use strict";
 
 const BACKEND_URL = "https://lucifer-backend-nas5.onrender.com";
-const YOUTUBE_API_KEY = "AIzaSyCTAGwCTqURhP-8gVV9yVlxeDC7wMTGZ6Y";
 
 const FIREBASE_CONFIG = {
     apiKey:             "AIzaSyAJhhW9z-EopZTQE0191PxSjC1dAIM61mc",
@@ -563,7 +571,7 @@ const auth   = firebase.auth();
 const msgRef = db.ref("messages");
 
 let appStarted = false;
-let HANDSHAKE_SECRET = "blue-1408";
+let HANDSHAKE_SECRET = "";
 
 const chatBox  = document.getElementById("chat-box");
 const userIn   = document.getElementById("user-in");
@@ -602,16 +610,34 @@ async function unlockGuild() {
     const passInput = document.getElementById("guild-pass");
     const pass = passInput.value.trim();
     const errorEl = document.getElementById("lock-error");
+    const statusEl = document.getElementById("lock-status");
     const btn = document.querySelector("#site-lock button");
+    const setStatus = (text) => { statusEl.textContent = text; };
+
     if (!pass) {
         errorEl.textContent = "Enter the secret word.";
+        setStatus("");
         return;
     }
 
     btn.textContent = "VERIFYING...";
+    btn.disabled = true;
     errorEl.textContent = "";
+    setStatus("Contacting backend...");
 
     try {
+        const healthRes = await fetch(BACKEND_URL + "/health");
+        if (!healthRes.ok) {
+            throw new Error("Backend health check failed.");
+        }
+        const health = await healthRes.json();
+        const down = Object.entries(health.apis || {})
+            .filter(([, ok]) => !ok)
+            .map(([name]) => name)
+            .join(", ");
+        setStatus(down ? `Backend online. Missing: ${down}` : "Backend online. APIs look ready.");
+
+        setStatus("Verifying secret word...");
         const res = await fetch(BACKEND_URL + "/config", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -620,34 +646,47 @@ async function unlockGuild() {
         const data = await res.json();
 
         if (res.ok && data.status === "authorized") {
-            HANDSHAKE_SECRET = data.handshake || HANDSHAKE_SECRET;
+            HANDSHAKE_SECRET = data.handshake || "";
+            if (!HANDSHAKE_SECRET) {
+                errorEl.textContent = "Handshake missing from server config.";
+                return;
+            }
+            await startApp(setStatus);
+            setStatus("All checks passed. Entering Guild Hall...");
             document.body.classList.add("unlocked");
-            await startApp();
             return;
         }
 
         errorEl.textContent = "The word is incorrect.";
+        setStatus("Verification failed.");
     } catch (_) {
         errorEl.textContent = "Connection hazy... try again.";
+        setStatus("Could not complete backend/API checks.");
     } finally {
         btn.textContent = "UNSEAL";
+        btn.disabled = false;
     }
 }
 
-async function startApp() {
+async function startApp(setStatus = () => {}) {
     if (appStarted) return;
     appStarted = true;
 
     try {
+        setStatus("Signing into Firebase...");
         await auth.signInAnonymously();
     } catch (e) {
         console.error("Login Error", e);
+        setStatus("Firebase login failed.");
+        throw e;
     }
 
+    setStatus("Loading messages...");
     await loadHistory();
+    setStatus("Starting live updates...");
     listenForIshan();
+    setStatus("Loading letter...");
     updateLoveTimer();
-    setInterval(updateLoveTimer, 1000);
     loadLetterFromFile();
 }
 
@@ -694,6 +733,7 @@ async function send() {
         });
 
         const data = await res.json();
+        if (!res.ok) throw new Error(data.reply || "Chat failed");
         const aiRef = await msgRef.push({ role:"lucifer", text: data.reply, time: Date.now(), src:"ai" });
         renderMessage({ role:"lucifer", text: data.reply, time: Date.now() }, aiRef.key);
         loader.remove();
@@ -733,8 +773,14 @@ async function searchYoutubeSongs() {
     songResults.innerHTML = "";
 
     try {
-        const endpoint = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoEmbeddable=true&maxResults=12&q=${encodeURIComponent(query)}&key=${YOUTUBE_API_KEY}`;
-        const res = await fetch(endpoint);
+        const res = await fetch(BACKEND_URL + "/search-youtube", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-Lucifer-Secret": HANDSHAKE_SECRET
+            },
+            body: JSON.stringify({ query })
+        });
         const data = await res.json();
 
         if (!res.ok || data.error) {
